@@ -102,32 +102,36 @@ main() {
             EMAIL=$(echo "$SEED_USER_EMAIL" | tr '[:upper:]' '[:lower:]' | xargs)
             USER_ID=$(echo -n "$EMAIL" | sha256sum | awk '{print $1}')
             WS_ID="${USER_ID}-ws"
-            
-            # Hash oficial verificado via Python de 'jitsupainel@obraag2026'
-            USER_HASH='$2b$10$N1RJDihy63pM6zuIndjvwu702oqEzlCceFEqgFl8XDSgVfzO.9TQy'
-            
-            printf "
-            DO \$\$ 
-            BEGIN
-                -- 1. Garante Workspace 'main'
-                INSERT INTO \"newjitsu\".\"Workspace\" (id, name, slug, \"updatedAt\") 
-                VALUES ('$WS_ID', 'Main Workspace', 'main', NOW()) ON CONFLICT (slug) DO UPDATE SET slug = 'main';
+            USER_NAME="${EMAIL%%@*}"
 
-                -- 2. Garante Perfil com ExternalId = Email (O segredo do acesso)
-                INSERT INTO \"newjitsu\".\"UserProfile\" (id, name, email, admin, \"loginProvider\", \"externalId\", \"updatedAt\")
-                VALUES ('$USER_ID', '${EMAIL%%@*}', '$EMAIL', true, 'credentials', '$EMAIL', NOW())
-                ON CONFLICT (id) DO UPDATE SET \"externalId\" = '$EMAIL', admin = true;
+            # Monta o SQL em arquivo temporário para evitar que o shell destrua os $ do hash BCrypt
+            cat > /tmp/rescue.sql <<'EOSQL'
+DO $$
+BEGIN
+    INSERT INTO "newjitsu"."Workspace" (id, name, slug, "updatedAt")
+    VALUES ('__WS_ID__', 'Main Workspace', 'main', NOW())
+    ON CONFLICT (slug) DO UPDATE SET slug = 'main';
 
-                -- 3. Garante Senha Estática (Auth Fix)
-                INSERT INTO \"newjitsu\".\"UserPassword\" (id, \"userId\", hash, \"updatedAt\", \"createdAt\")
-                VALUES ('${USER_ID}-pw', '$USER_ID', '$USER_HASH', NOW(), NOW())
-                ON CONFLICT (\"userId\") DO UPDATE SET hash = '$USER_HASH';
+    INSERT INTO "newjitsu"."UserProfile" (id, name, email, admin, "loginProvider", "externalId", "updatedAt")
+    VALUES ('__USER_ID__', '__USER_NAME__', '__EMAIL__', true, 'credentials', '__EMAIL__', NOW())
+    ON CONFLICT (id) DO UPDATE SET "externalId" = '__EMAIL__', admin = true;
 
-                -- 4. Garante Vínculo de Owner
-                INSERT INTO \"newjitsu\".\"WorkspaceAccess\" (\"userId\", \"workspaceId\", role, \"updatedAt\", \"createdAt\")
-                VALUES ('$USER_ID', '$WS_ID', 'owner', NOW(), NOW()) ON CONFLICT DO NOTHING;
-            END \$\$;
-            " | npx prisma db execute --stdin --schema /app/schema.prisma && echo "✅ Rescue successful! Identity and Static Password synced." || echo "❌ Rescue failed."
+    INSERT INTO "newjitsu"."UserPassword" (id, "userId", hash, "updatedAt", "createdAt")
+    VALUES ('__USER_ID__-pw', '__USER_ID__', '$2b$10$N1RJDihy63pM6zuIndjvwu702oqEzlCceFEqgFl8XDSgVfzO.9TQy', NOW(), NOW())
+    ON CONFLICT ("userId") DO UPDATE SET hash = '$2b$10$N1RJDihy63pM6zuIndjvwu702oqEzlCceFEqgFl8XDSgVfzO.9TQy';
+
+    INSERT INTO "newjitsu"."WorkspaceAccess" ("userId", "workspaceId", role, "updatedAt", "createdAt")
+    VALUES ('__USER_ID__', '__WS_ID__', 'owner', NOW(), NOW()) ON CONFLICT DO NOTHING;
+END $$;
+EOSQL
+            # Substitui os placeholders (sem tocar nos $ do hash)
+            sed -i "s|__USER_ID__|${USER_ID}|g" /tmp/rescue.sql
+            sed -i "s|__WS_ID__|${WS_ID}|g" /tmp/rescue.sql
+            sed -i "s|__EMAIL__|${EMAIL}|g" /tmp/rescue.sql
+            sed -i "s|__USER_NAME__|${USER_NAME}|g" /tmp/rescue.sql
+
+            cat /tmp/rescue.sql | npx prisma db execute --stdin --schema /app/schema.prisma && echo "✅ Rescue successful! Identity and Static Password synced." || echo "❌ Rescue failed."
+            rm -f /tmp/rescue.sql
         fi
 
     # Starting the app
