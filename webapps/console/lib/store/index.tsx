@@ -10,6 +10,7 @@ import type {
 } from "../schema";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getLog, requireDefined, rpc } from "juava";
+import { safeParseWithDate } from "../zod";
 import { useWorkspace } from "../context";
 import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
@@ -103,7 +104,11 @@ async function initialDataLoad(
   const loaders: Promise<void>[] = [];
 
   const data = await rpc(`/api/workspace/${workspaceIdOrSlug}`, { signal });
-  const workspaceDbModel = WorkspaceDbModel.parse(data) as any;
+  const parseResult = safeParseWithDate(WorkspaceDbModel, data);
+  if (!parseResult.success) {
+    throw new Error(`Failed to parse workspace data: ${JSON.stringify(parseResult.error.issues)}`);
+  }
+  const workspaceDbModel = parseResult.data as any;
   workspaceDbModel.oidcLoginGroups = data.oidcLoginGroups;
 
   await queryClient.prefetchQuery(getWorkspaceCacheKey(workspaceIdOrSlug), async () => workspaceDbModel, foreverCache);
