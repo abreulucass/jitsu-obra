@@ -34,6 +34,7 @@ x-mongodb-env: &mongodb-env
 x-kafka-env: &kafka-env
   KAFKA_BOOTSTRAP_SERVERS: dep-redpanda:9092
   KAFKA_SSL: false
+  KAFKA_COMPRESSION_TYPE: ${KAFKA_COMPRESSION_TYPE:-none}
 
 # Console service configuration
 x-console-env: &console-env
@@ -76,8 +77,7 @@ x-bulker-env: &bulker-env
   BULKER_CLICKHOUSE_HOST: dep-clickhouse:8123
   BULKER_CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhouse-pass}
   BULKER_CLICKHOUSE_DATABASE: default
-  KAFKA_COMPRESSION_TYPE: snappy
-  KAFKA_COMPRESSION_CODEC: snappy
+  KAFKA_COMPRESSION_TYPE: ${KAFKA_COMPRESSION_TYPE:-none}
 
 x-ingest-env: &ingest-env
   LOG_LEVEL: debug
