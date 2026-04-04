@@ -92,18 +92,20 @@ export async function seedUserAndWorkspace(): Promise<void> {
     log.atDebug().log(`Seeding/Updating admin user with id ${userId} and email ${email}`);
     
     // Upsert UserProfile
+    // Note: externalId must match what NextAuth's JWT callback uses as token.sub
+    // For credentials login, token.sub = user.id = toId(email), so externalId = userId
     await db.prisma().userProfile.upsert({
       where: { id: userId },
       update: { 
         email: email, 
-        externalId: email, 
+        externalId: userId, 
         admin: true 
       },
       create: {
         id: userId,
         email: email,
         name: username,
-        externalId: email,
+        externalId: userId,
         loginProvider: "credentials",
         admin: true,
       },
