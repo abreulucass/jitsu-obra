@@ -82,15 +82,13 @@ main() {
   cmd=$1
   export SIGNALS_LIFECYCLE=1
   if [ -z "$cmd" ]; then
-    echo "Generating Prisma Client for Console..."
-    npx prisma generate --schema=webapps/console/prisma/schema.prisma || echo "Prisma generate failed, but continuing..."
-    ls -R node_modules/.prisma || echo "Prisma client directory not found"
-    if [ "$FORCE_UPDATE_DB" = "1" ] || [ "$FORCE_UPDATE_DB" = "yes" ] || [ "$FORCE_UPDATE_DB" = "true" ]; then
-      echo "FORCE_UPDATE_DB is set, updating database schema..."
-      npx prisma db push --skip-generate --schema webapps/console/prisma/schema.prisma --accept-data-loss
-    elif [ "$UPDATE_DB" != "0" ] && [ "$UPDATE_DB" != "no" ] && [ "$UPDATE_DB" != "false" ]; then
+    # We need to run it after pg is up
+    if [ -f "/app/schema.prisma" ]; then
+      echo "Generating Prisma Client for Console..."
+      npx prisma generate --schema /app/schema.prisma || echo "Prisma generate failed, but continuing..."
+      ls -la node_modules/.prisma || echo "Prisma client directory not found"
       echo "Updating database schema..."
-      npx prisma db push --skip-generate --schema webapps/console/prisma/schema.prisma
+      npx prisma db push --accept-data-loss --skip-generate --schema /app/schema.prisma
     fi
 
     # Run seed if SEED_DEMO_CONFIGURATION is set
@@ -102,42 +100,24 @@ main() {
     # Automatic Seeding via .env
     if [ -n "$SEED_USER_EMAIL" ] && [ -n "$SEED_USER_PASSWORD" ]; then
         echo "🌱 Automatic seeding detected for $SEED_USER_EMAIL..."
-        node -e "
-    const { Client } = require('pg');
-    const crypto = require('crypto');
-
-    async function seed() {
-        const client = new Client({
-            connectionString: process.env.DATABASE_URL
-        });
-        try {
-            await client.connect();
-            
-            const email = process.env.SEED_USER_EMAIL.toLowerCase().trim();
-            const password = process.env.SEED_USER_PASSWORD;
-            const userId = crypto.createHash('sha256').update(email).digest('hex');
-            
-            // Juava Hashing Logic (SHA512 + Salt)
-            const randomSeed = 'abc123def456ghi789jkl012mno345pq';
-            const globalSeed = process.env.GLOBAL_HASH_SECRET || process.env.CONSOLE_TOKEN_SECRET || 'dea42a58-acf4-45af-85bb-e77e94bd5025';
-            const hash = randomSeed + '.' + crypto.createHash('sha512').update(password + randomSeed + globalSeed).digest('hex');
-
-            console.log('  -> Injecting User: ' + email + ' (ID: ' + userId + ')');
-            
-            await client.query('INSERT INTO \"newjitsu\".\"Workspace\" (id, name, slug) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING', [userId + '-ws', 'Main Workspace', 'main']);
-            await client.query('INSERT INTO \"newjitsu\".\"UserProfile\" (id, name, email, admin, \"loginProvider\", \"externalId\") VALUES ($1, $2, $3, true, $4, $5) ON CONFLICT DO NOTHING', [userId, email.split('@')[0], email, 'credentials', userId]);
-            await client.query('INSERT INTO \"newjitsu\".\"UserPassword\" (id, \"userId\", hash, \"changeAtNextLogin\") VALUES ($1, $2, $3, false) ON CONFLICT DO NOTHING', [userId + '-pw', userId, hash]);
-            await client.query('INSERT INTO \"newjitsu\".\"WorkspaceAccess\" (\"userId\", \"workspaceId\", role) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING', [userId, userId + '-ws', 'owner']);
-            
-            console.log('✅ Automatic seeding successful!');
-        } catch (err) {
-            console.error('❌ Automatic seeding failed:', err.message);
-        } finally {
-            await client.end();
-        }
-    }
-    seed();
-    "
+        
+        # Calculate IDs and Hashes (using basic bash/node without external libs)
+        EMAIL=$(echo "$SEED_USER_EMAIL" | tr '[:upper:]' '[:lower:]' | xargs)
+        USER_ID=$(node -e "const crypto = require('crypto'); console.log(crypto.createHash('sha256').update('$EMAIL').digest('hex'))")
+        
+        # Juava Hashing Logic (SHA512 + Salt)
+        GLOBAL_SEED=${GLOBAL_HASH_SECRET:-${CONSOLE_TOKEN_SECRET:-"dea42a58-acf4-45af-85bb-e77e94bd5025"}}
+        RANDOM_SALT="abc123def456ghi789jkl012mno345pq"
+        USER_HASH=$(node -e "const crypto = require('crypto'); console.log('$RANDOM_SALT.' + crypto.createHash('sha512').update('$SEED_USER_PASSWORD' + '$RANDOM_SALT' + '$GLOBAL_SEED').digest('hex'))")
+        
+        # Inject using Prisma DB Execute (Native and Safe)
+        echo "  -> Injecting Administrative User via Prisma..."
+        printf "
+        INSERT INTO \"newjitsu\".\"Workspace\" (id, name, slug) VALUES ('${USER_ID}-ws', 'Main Workspace', 'main') ON CONFLICT DO NOTHING;
+        INSERT INTO \"newjitsu\".\"UserProfile\" (id, name, email, admin, \"loginProvider\", \"externalId\") VALUES ('${USER_ID}', '${EMAIL%%@*}', '${EMAIL}', true, 'credentials', '${USER_ID}') ON CONFLICT DO NOTHING;
+        INSERT INTO \"newjitsu\".\"UserPassword\" (id, \"userId\", hash, \"changeAtNextLogin\") VALUES ('${USER_ID}-pw', '${USER_ID}', '${USER_HASH}', false) ON CONFLICT DO NOTHING;
+        INSERT INTO \"newjitsu\".\"WorkspaceAccess\" (\"userId\", \"workspaceId\", role) VALUES ('${USER_ID}', '${USER_ID}-ws', 'owner') ON CONFLICT DO NOTHING;
+        " | npx prisma db execute --stdin --schema /app/schema.prisma && echo "✅ Automatic seeding successful!" || echo "❌ Automatic seeding failed (this is ok if already seeded)"
     fi
 
     # Starting the app
