@@ -140,7 +140,7 @@ export async function seedUserAndWorkspace(): Promise<void> {
       },
     });
 
-    // Ensure Workspace Access
+    // Ensure Workspace Access for the seed workspace
     await db.prisma().workspaceAccess.upsert({
       where: {
         userId_workspaceId: {
@@ -155,8 +155,27 @@ export async function seedUserAndWorkspace(): Promise<void> {
         role: "owner",
       },
     });
-    
-    log.atInfo().log(`✅ Admin user and workspace seeding confirmed for ${email}`);
+
+    // Grant admin access to ALL existing workspaces (not just the seed one)
+    const allWorkspaces = await db.prisma().workspace.findMany();
+    for (const ws of allWorkspaces) {
+      if (ws.id === workspace.id) continue; // already handled above
+      await db.prisma().workspaceAccess.upsert({
+        where: {
+          userId_workspaceId: {
+            workspaceId: ws.id,
+            userId: userId,
+          },
+        },
+        update: { role: "owner" },
+        create: {
+          userId: userId,
+          workspaceId: ws.id,
+          role: "owner",
+        },
+      });
+    }
+    log.atInfo().log(`✅ Admin user seeded with access to ${allWorkspaces.length} workspace(s) for ${email}`);
   }
 }
 
