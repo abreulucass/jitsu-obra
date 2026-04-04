@@ -94,6 +94,12 @@ main() {
     # Run seed if SEED_DEMO_CONFIGURATION is set
     if [ ! -z "$SEED_DEMO_CONFIGURATION" ]; then
       echo "SEED_DEMO_CONFIGURATION is set, seeding demo configuration..."
+      # Dynamic Prisma Engine Recovery: Find the native binary wherever it is hidden (pnpm vs standalone)
+      PRISMA_ENGINE_PATH=$(find /app/node_modules -name "libquery_engine-debian-openssl-3.0.x.so.node" | head -n 1)
+      if [ -n "$PRISMA_ENGINE_PATH" ]; then
+        echo "⚡️ Located Prisma Engine: $PRISMA_ENGINE_PATH"
+        export PRISMA_QUERY_ENGINE_LIBRARY="$PRISMA_ENGINE_PATH"
+      fi
       node /app/webapps/console/build/manage.js seed || echo "Seed failed or skipped (this is ok if already seeded)"
     fi
 
