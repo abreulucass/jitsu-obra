@@ -97,29 +97,6 @@ main() {
       node /app/webapps/console/build/manage.js seed || echo "Seed failed or skipped (this is ok if already seeded)"
     fi
 
-    # Automatic Seeding via .env
-    if [ -n "$SEED_USER_EMAIL" ] && [ -n "$SEED_USER_PASSWORD" ]; then
-        echo "🌱 Automatic seeding detected for $SEED_USER_EMAIL..."
-        
-        # Calculate IDs and Hashes (using basic bash/node without external libs)
-        EMAIL=$(echo "$SEED_USER_EMAIL" | tr '[:upper:]' '[:lower:]' | xargs)
-        USER_ID=$(node -e "const crypto = require('crypto'); console.log(crypto.createHash('sha256').update('$EMAIL').digest('hex'))")
-        
-        # Juava Hashing Logic (SHA512 + Salt)
-        GLOBAL_SEED=${GLOBAL_HASH_SECRET:-${CONSOLE_TOKEN_SECRET:-"dea42a58-acf4-45af-85bb-e77e94bd5025"}}
-        RANDOM_SALT="abc123def456ghi789jkl012mno345pq"
-        USER_HASH=$(node -e "const crypto = require('crypto'); console.log('$RANDOM_SALT.' + crypto.createHash('sha512').update('$SEED_USER_PASSWORD' + '$RANDOM_SALT' + '$GLOBAL_SEED').digest('hex'))")
-        
-        # Inject using Prisma DB Execute (Native and Safe)
-        echo "  -> Injecting Administrative User via Prisma..."
-        printf "
-        INSERT INTO \"newjitsu\".\"Workspace\" (id, name, slug) VALUES ('${USER_ID}-ws', 'Main Workspace', 'main') ON CONFLICT DO NOTHING;
-        INSERT INTO \"newjitsu\".\"UserProfile\" (id, name, email, admin, \"loginProvider\", \"externalId\") VALUES ('${USER_ID}', '${EMAIL%%@*}', '${EMAIL}', true, 'credentials', '${USER_ID}') ON CONFLICT DO NOTHING;
-        INSERT INTO \"newjitsu\".\"UserPassword\" (id, \"userId\", hash, \"changeAtNextLogin\") VALUES ('${USER_ID}-pw', '${USER_ID}', '${USER_HASH}', false) ON CONFLICT DO NOTHING;
-        INSERT INTO \"newjitsu\".\"WorkspaceAccess\" (\"userId\", \"workspaceId\", role) VALUES ('${USER_ID}', '${USER_ID}-ws', 'owner') ON CONFLICT DO NOTHING;
-        " | npx prisma db execute --stdin --schema /app/schema.prisma && echo "✅ Automatic seeding successful!" || echo "❌ Automatic seeding failed (this is ok if already seeded)"
-    fi
-
     # Starting the app
     echo "Starting the app"
     healthcheck $$ &
