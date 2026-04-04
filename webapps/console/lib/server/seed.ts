@@ -84,19 +84,26 @@ function isInitialStream(config: any): boolean {
 
 export async function seedUserAndWorkspace(): Promise<void> {
   const serverEnv = getServerEnv();
-  const profileCount = await db.prisma().userProfile.count();
-  if (profileCount === 0 && serverEnv.SEED_USER_EMAIL && serverEnv.SEED_USER_PASSWORD) {
+  if (serverEnv.SEED_USER_EMAIL && serverEnv.SEED_USER_PASSWORD) {
     const email = serverEnv.SEED_USER_EMAIL;
     const [username] = email.split("@");
     const password = serverEnv.SEED_USER_PASSWORD;
     const userId = toId(serverEnv.SEED_USER_EMAIL);
-    log.atDebug().log(`Adding a seed admin user with id ${userId} and email ${email}`);
-    await db.prisma().userProfile.create({
-      data: {
+    log.atDebug().log(`Seeding/Updating admin user with id ${userId} and email ${email}`);
+    
+    // Upsert UserProfile
+    await db.prisma().userProfile.upsert({
+      where: { id: userId },
+      update: { 
+        email: email, 
+        externalId: email, 
+        admin: true 
+      },
+      create: {
         id: userId,
         email: email,
         name: username,
-        externalId: userId,
+        externalId: email,
         loginProvider: "credentials",
         admin: true,
         password: {
@@ -107,16 +114,37 @@ export async function seedUserAndWorkspace(): Promise<void> {
         },
       },
     });
+
     const workspaceName = pickWorkspaceName(email, username);
-    const newWorkspace = await db.prisma().workspace.create({
-      data: {
+    const slug = pickSlug(email, workspaceName);
+    
+    // Upsert Workspace
+    const workspace = await db.prisma().workspace.upsert({
+      where: { slug: slug },
+      update: { name: workspaceName },
+      create: {
         name: workspaceName,
-        slug: pickSlug(email, workspaceName),
+        slug: slug,
       },
     });
-    await db.prisma().workspaceAccess.create({
-      data: { userId: userId, workspaceId: newWorkspace.id, role: "owner" },
+
+    // Ensure Workspace Access
+    await db.prisma().workspaceAccess.upsert({
+      where: {
+        workspaceId_userId: {
+          workspaceId: workspace.id,
+          userId: userId,
+        },
+      },
+      update: { role: "owner" },
+      create: {
+        userId: userId,
+        workspaceId: workspace.id,
+        role: "owner",
+      },
     });
+    
+    log.atInfo().log(`✅ Admin user and workspace seeding confirmed for ${email}`);
   }
 }
 
