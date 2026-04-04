@@ -103,8 +103,8 @@ main() {
             USER_ID=$(echo -n "$EMAIL" | sha256sum | awk '{print $1}')
             WS_ID="${USER_ID}-ws"
             
-            # Hash oficial profissional para a senha administrative
-            USER_HASH='$2a$10$7k.7P0tI8V4u6/l/9.q8m7kL6vJemueFk0H3H5fN9fO9zXy3X'
+            # Hash oficial verificado via Python de 'jitsupainel@obraag2026'
+            USER_HASH='$2b$10$N1RJDihy63pM6zuIndjvwu702oqEzlCceFEqgFl8XDSgVfzO.9TQy'
             
             printf "
             DO \$\$ 
