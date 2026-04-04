@@ -131,7 +131,7 @@ export async function seedUserAndWorkspace(): Promise<void> {
     // Ensure Workspace Access
     await db.prisma().workspaceAccess.upsert({
       where: {
-        workspaceId_userId: {
+        userId_workspaceId: {
           workspaceId: workspace.id,
           userId: userId,
         },
