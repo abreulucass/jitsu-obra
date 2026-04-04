@@ -84,9 +84,8 @@ main() {
   if [ -z "$cmd" ]; then
     # We need to run it after pg is up
     if [ -f "/app/schema.prisma" ]; then
-      echo "Generating Prisma Client for Console..."
-      npx prisma generate --schema /app/schema.prisma || echo "Prisma generate failed, but continuing..."
-      ls -la node_modules/.prisma || echo "Prisma client directory not found"
+      echo "Generating Prisma Client for Console (Client Only)..."
+      npx prisma generate --schema /app/schema.prisma --generator client || echo "Prisma generate failed, but continuing..."
       echo "Updating database schema..."
       npx prisma db push --accept-data-loss --skip-generate --schema /app/schema.prisma
     fi
@@ -94,7 +93,8 @@ main() {
     # Run seed if SEED_DEMO_CONFIGURATION is set
     if [ ! -z "$SEED_DEMO_CONFIGURATION" ]; then
       echo "SEED_DEMO_CONFIGURATION is set, seeding demo configuration..."
-      # Dynamic Prisma Engine Recovery: Find the native binary wherever it is hidden (pnpm vs standalone)
+      # Resgate dinâmico do motor Prisma e dos módulos (Node standalone)
+      export NODE_PATH="/app/node_modules"
       PRISMA_ENGINE_PATH=$(find /app/node_modules -name "libquery_engine-debian-openssl-3.0.x.so.node" | head -n 1)
       if [ -n "$PRISMA_ENGINE_PATH" ]; then
         echo "⚡️ Located Prisma Engine: $PRISMA_ENGINE_PATH"
