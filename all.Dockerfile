@@ -147,7 +147,7 @@ RUN npm install --silent --prefix /tmp/prisma-install \
     mkdir -p node_modules/@prisma node_modules/.prisma && \
     cp -r /tmp/prisma-install/node_modules/@prisma/client node_modules/@prisma/client && \
     cp -r /tmp/prisma-install/node_modules/.prisma/client node_modules/.prisma/client 2>/dev/null; \
-    prisma generate --schema ./schema.prisma && \
+    prisma generate --schema ./schema.prisma --generator client && \
     rm -rf /tmp/prisma-install
 
 # Setup cron for scheduled tasks (e.g., cleanup, analytics aggregation)
