@@ -140,10 +140,12 @@ COPY --from=builder /app/webapps/console/public ./webapps/console/public
 # This allows running management commands like: node /app/webapps/console/build/manage.js seed
 COPY --from=builder /app/webapps/console/build/manage.js ./webapps/console/build/
 
-# Copy Prisma Client gerado (necessário para manage.js seed no runtime)
-# O manage.js usa --external:@prisma/client, então precisa do client em node_modules
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
+# Install @prisma/client and generate Prisma Client (needed for manage.js seed)
+# The manage.js bundle uses --external:@prisma/client, so it needs the client at runtime
+# We install + generate here instead of copying from builder because pnpm uses
+# symlinks and a content-addressable store that doesn't survive COPY
+RUN npm install @prisma/client@$(jq -r '.dependencies["@prisma/client"]' /tmp/console-package.json) && \
+    prisma generate --schema ./schema.prisma
 
 # Setup cron for scheduled tasks (e.g., cleanup, analytics aggregation)
 # chmod 0644: cron requires specific permissions (owner read/write, others read)
