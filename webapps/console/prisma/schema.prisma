@@ -1,13 +1,13 @@
-// generator zod {
-//   provider = "zod-prisma"
-//   output   = "./schema"
-// 
-//   relationModel         = false
-//   modelCase             = "PascalCase"
-//   modelSuffix           = "DbModel"
-//   useDecimalJs          = true
-//   prismaJsonNullability = true
-// }
+generator zod {
+  provider = "zod-prisma"
+  output   = "./schema"
+
+  relationModel         = false
+  modelCase             = "PascalCase"
+  modelSuffix           = "DbModel"
+  useDecimalJs          = true
+  prismaJsonNullability = true
+}
 
 generator client {
   provider        = "prisma-client-js"
