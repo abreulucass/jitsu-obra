@@ -106,14 +106,24 @@ export async function seedUserAndWorkspace(): Promise<void> {
         externalId: email,
         loginProvider: "credentials",
         admin: true,
-        password: {
-          create: {
-            hash: createHash(password),
-            changeAtNextLogin: true,
-          },
-        },
       },
     });
+
+    // Ensure password always exists and is up to date
+    const passwordHash = createHash(password);
+    const existingPassword = await db.prisma().userPassword.findUnique({
+      where: { userId: userId },
+    });
+    if (!existingPassword) {
+      await db.prisma().userPassword.create({
+        data: {
+          userId: userId,
+          hash: passwordHash,
+          changeAtNextLogin: false,
+        },
+      });
+      log.atInfo().log(`Password created for ${email}`);
+    }
 
     const workspaceName = pickWorkspaceName(email, username);
     const slug = pickSlug(email, workspaceName);

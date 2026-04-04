@@ -84,8 +84,6 @@ main() {
   if [ -z "$cmd" ]; then
     # We need to run it after pg is up
     if [ -f "/app/schema.prisma" ]; then
-      echo "Generating Prisma Client for Console (Client Only)..."
-      npx prisma generate --schema /app/schema.prisma --generator client || echo "Prisma generate failed, but continuing..."
       echo "Updating database schema..."
       npx prisma db push --accept-data-loss --skip-generate --schema /app/schema.prisma
     fi
@@ -93,46 +91,8 @@ main() {
     # Run seed if SEED_DEMO_CONFIGURATION is set
     if [ ! -z "$SEED_DEMO_CONFIGURATION" ]; then
       echo "SEED_DEMO_CONFIGURATION is set, attempting seeding..."
-      node /app/webapps/console/build/manage.js seed || echo ""
+      node /app/webapps/console/build/manage.js seed || echo "Seed failed, but continuing..."
     fi
-
-        # 🆘 EMERGENCY RESCUE: Injeção Direta de Identidade & Senha (DNA & Auth Fix)
-        if [ -n "$SEED_USER_EMAIL" ]; then
-            echo "🚨 Emergency Rescue: Syncing identity and static password for $SEED_USER_EMAIL..."
-            EMAIL=$(echo "$SEED_USER_EMAIL" | tr '[:upper:]' '[:lower:]' | xargs)
-            USER_ID=$(echo -n "$EMAIL" | sha256sum | awk '{print $1}')
-            WS_ID="${USER_ID}-ws"
-            USER_NAME="${EMAIL%%@*}"
-
-            # Monta o SQL em arquivo temporário para evitar que o shell destrua os $ do hash BCrypt
-            cat > /tmp/rescue.sql <<'EOSQL'
-DO $$
-BEGIN
-    INSERT INTO "newjitsu"."Workspace" (id, name, slug, "updatedAt")
-    VALUES ('__WS_ID__', 'Main Workspace', 'main', NOW())
-    ON CONFLICT (slug) DO UPDATE SET slug = 'main';
-
-    INSERT INTO "newjitsu"."UserProfile" (id, name, email, admin, "loginProvider", "externalId", "updatedAt")
-    VALUES ('__USER_ID__', '__USER_NAME__', '__EMAIL__', true, 'credentials', '__EMAIL__', NOW())
-    ON CONFLICT (id) DO UPDATE SET "externalId" = '__EMAIL__', admin = true;
-
-    INSERT INTO "newjitsu"."UserPassword" (id, "userId", hash, "updatedAt", "createdAt")
-    VALUES ('__USER_ID__-pw', '__USER_ID__', '$2b$10$N1RJDihy63pM6zuIndjvwu702oqEzlCceFEqgFl8XDSgVfzO.9TQy', NOW(), NOW())
-    ON CONFLICT ("userId") DO UPDATE SET hash = '$2b$10$N1RJDihy63pM6zuIndjvwu702oqEzlCceFEqgFl8XDSgVfzO.9TQy';
-
-    INSERT INTO "newjitsu"."WorkspaceAccess" ("userId", "workspaceId", role, "updatedAt", "createdAt")
-    VALUES ('__USER_ID__', '__WS_ID__', 'owner', NOW(), NOW()) ON CONFLICT DO NOTHING;
-END $$;
-EOSQL
-            # Substitui os placeholders (sem tocar nos $ do hash)
-            sed -i "s|__USER_ID__|${USER_ID}|g" /tmp/rescue.sql
-            sed -i "s|__WS_ID__|${WS_ID}|g" /tmp/rescue.sql
-            sed -i "s|__EMAIL__|${EMAIL}|g" /tmp/rescue.sql
-            sed -i "s|__USER_NAME__|${USER_NAME}|g" /tmp/rescue.sql
-
-            cat /tmp/rescue.sql | npx prisma db execute --stdin --schema /app/schema.prisma && echo "✅ Rescue successful! Identity and Static Password synced." || echo "❌ Rescue failed."
-            rm -f /tmp/rescue.sql
-        fi
 
     # Starting the app
     echo "Starting the app"
