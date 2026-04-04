@@ -34,7 +34,9 @@ x-mongodb-env: &mongodb-env
 x-kafka-env: &kafka-env
   KAFKA_BOOTSTRAP_SERVERS: dep-redpanda:9092
   KAFKA_SSL: false
-  KAFKA_COMPRESSION_TYPE: ${KAFKA_COMPRESSION_TYPE:-none}
+  KAFKA_COMPRESSION_TYPE: none
+  KAFKA_TOPIC_REPLICATION_FACTOR: 1
+  BULKER_KAFKA_REPLICATION_FACTOR: 1
 
 # Console service configuration
 x-console-env: &console-env
@@ -173,6 +175,7 @@ services:
     container_name: jitsu-dep-clickhouse
     networks:
       - jitsu-dev-network
+    user: root
     image: clickhouse/clickhouse-server:latest
     restart: always
     environment:
@@ -353,6 +356,7 @@ services:
       start_period: 40s
     environment:
       <<: *rotor-env
+      KAFKA_COMPRESSION_TYPE: none
     env_file: *env-files
     depends_on:
       dep-postgres:
