@@ -99,6 +99,48 @@ main() {
       node /app/webapps/console/build/manage.js seed || echo "Seed failed or skipped (this is ok if already seeded)"
     fi
 
+    # Automatic Seeding via .env
+    if [ -n "$SEED_USER_EMAIL" ] && [ -n "$SEED_USER_PASSWORD" ]; then
+        echo "🌱 Automatic seeding detected for $SEED_USER_EMAIL..."
+        node -e "
+    const { Client } = require('pg');
+    const crypto = require('crypto');
+
+    async function seed() {
+        const client = new Client({
+            connectionString: process.env.DATABASE_URL
+        });
+        try {
+            await client.connect();
+            
+            const email = process.env.SEED_USER_EMAIL.toLowerCase().trim();
+            const password = process.env.SEED_USER_PASSWORD;
+            const userId = crypto.createHash('sha256').update(email).digest('hex');
+            
+            // Juava Hashing Logic (SHA512 + Salt)
+            const randomSeed = 'abc123def456ghi789jkl012mno345pq';
+            const globalSeed = process.env.GLOBAL_HASH_SECRET || process.env.CONSOLE_TOKEN_SECRET || 'dea42a58-acf4-45af-85bb-e77e94bd5025';
+            const hash = randomSeed + '.' + crypto.createHash('sha512').update(password + randomSeed + globalSeed).digest('hex');
+
+            console.log('  -> Injecting User: ' + email + ' (ID: ' + userId + ')');
+            
+            await client.query('INSERT INTO \"newjitsu\".\"Workspace\" (id, name, slug) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING', [userId + '-ws', 'Main Workspace', 'main']);
+            await client.query('INSERT INTO \"newjitsu\".\"UserProfile\" (id, name, email, admin, \"loginProvider\", \"externalId\") VALUES ($1, $2, $3, true, $4, $5) ON CONFLICT DO NOTHING', [userId, email.split('@')[0], email, 'credentials', userId]);
+            await client.query('INSERT INTO \"newjitsu\".\"UserPassword\" (id, \"userId\", hash, \"changeAtNextLogin\") VALUES ($1, $2, $3, false) ON CONFLICT DO NOTHING', [userId + '-pw', userId, hash]);
+            await client.query('INSERT INTO \"newjitsu\".\"WorkspaceAccess\" (\"userId\", \"workspaceId\", role) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING', [userId, userId + '-ws', 'owner']);
+            
+            console.log('✅ Automatic seeding successful!');
+        } catch (err) {
+            console.error('❌ Automatic seeding failed:', err.message);
+        } finally {
+            await client.end();
+        }
+    }
+    seed();
+    "
+    fi
+
+    # Starting the app
     echo "Starting the app"
     healthcheck $$ &
 
