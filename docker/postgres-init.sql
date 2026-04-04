@@ -1,8 +1,13 @@
 -- Esquemas fundamentais para Jitsu Core e Enterprise
-CREATE SCHEMA IF NOT EXISTS newjitsu;
+-- Usaremos o 'public' para o Console (Core) e 'newjitsuee' para o Enterprise (Rotor)
+CREATE SCHEMA IF NOT EXISTS public;
 CREATE SCHEMA IF NOT EXISTS newjitsuee;
 
+-- Configurar o search_path global para garantir resolução de nomes rápida
+ALTER DATABASE postgres SET search_path TO public, newjitsuee, "$user";
+
 -- Tabela KVStore (Obrigatória no esquema newjitsuee para o Rotor e módulo EE)
+-- Nota: O Rotor busca explicitamente por newjitsuee.kvstore
 CREATE TABLE IF NOT EXISTS newjitsuee.kvstore (
     id TEXT NOT NULL,
     namespace TEXT NOT NULL,
@@ -11,8 +16,8 @@ CREATE TABLE IF NOT EXISTS newjitsuee.kvstore (
     PRIMARY KEY (id, namespace)
 );
 
--- Permissões globais em ambos os namespaces
-GRANT USAGE ON SCHEMA newjitsu TO PUBLIC;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA newjitsu TO PUBLIC;
-GRANT USAGE ON SCHEMA newjitsuee TO PUBLIC;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA newjitsuee TO PUBLIC;
+-- Permissões globais para evitar erros de acesso
+GRANT ALL PRIVILEGES ON SCHEMA public TO postgres;
+GRANT ALL PRIVILEGES ON SCHEMA newjitsuee TO postgres;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO postgres;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA newjitsuee TO postgres;

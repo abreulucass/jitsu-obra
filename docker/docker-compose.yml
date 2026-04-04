@@ -13,8 +13,8 @@ x-common-env: &common-env
 
 # PostgreSQL database connection
 x-database-env: &database-env
-  DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres-mqf3nzx}@dep-postgres:5432/postgres?schema=newjitsu
-  APP_DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres-mqf3nzx}@dep-postgres:5432/postgres?schema=newjitsu
+  DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres-mqf3nzx}@dep-postgres:5432/postgres
+  APP_DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres-mqf3nzx}@dep-postgres:5432/postgres
 
 # ClickHouse analytics database connection
 x-clickhouse-env: &clickhouse-env
@@ -99,8 +99,8 @@ x-syncctl-env: &syncctl-env
   HTTP_PORT: 3043
   SYNCCTL_SYNCS_ENABLED: ${SYNCS_ENABLED:-true}
   SYNCCTL_RAW_AUTH_TOKENS: ${SYNCCTL_TOKEN:-dev-auth-key}
-  SYNCCTL_DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres-mqf3nzx}@dep-postgres:5432/postgres?search_path=newjitsu
-  SYNCCTL_SIDECAR_DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres-mqf3nzx}@dep-postgres:5432/postgres?search_path=newjitsu
+  SYNCCTL_DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres-mqf3nzx}@dep-postgres:5432/postgres
+  SYNCCTL_SIDECAR_DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres-mqf3nzx}@dep-postgres:5432/postgres
   SYNCCTL_KUBERNETES_CLIENT_CONFIG: ${SYNCCTL_KUBERNETES_CLIENT_CONFIG:-}
   SYNCCTL_KUBERNETES_CONTEXT: ${SYNCCTL_KUBERNETES_CONTEXT:-}
 
