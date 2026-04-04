@@ -1,13 +1,13 @@
-generator zod {
-  provider = "zod-prisma"
-  output   = "./schema"
-
-  relationModel         = false
-  modelCase             = "PascalCase"
-  modelSuffix           = "DbModel"
-  useDecimalJs          = true
-  prismaJsonNullability = true
-}
+// generator zod {
+//   provider = "zod-prisma"
+//   output   = "./schema"
+// 
+//   relationModel         = false
+//   modelCase             = "PascalCase"
+//   modelSuffix           = "DbModel"
+//   useDecimalJs          = true
+//   prismaJsonNullability = true
+// }
 
 generator client {
   provider        = "prisma-client-js"
@@ -31,15 +31,13 @@ model EmailLog {
 
 model UserPreferences {
   id        String      @id @default(cuid())
-  createdAt DateTime    @default(now()) /// @zod.custom(z.coerce.date())
-  updatedAt DateTime    @default(now()) @updatedAt /// @zod.custom(z.coerce.date())
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @default(now()) @updatedAt
   userId    String
   user      UserProfile @relation(fields: [userId], references: [id])
 
-  //If preferences relates to workspace,
   workspaceId String?
   workspace   Workspace? @relation(fields: [workspaceId], references: [id])
-  //empty or 'server-only'. Server-only means that preferences can't be changed from JS. NOT USED so far
   scope       String?
   preferences Json
 }
@@ -49,8 +47,8 @@ model UserProfile {
   name                    String
   email                   String
   admin                   Boolean?                  @default(false)
-  createdAt               DateTime                  @default(now()) /// @zod.custom(z.coerce.date())
-  updatedAt               DateTime                  @default(now()) @updatedAt /// @zod.custom(z.coerce.date())
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @default(now()) @updatedAt
   loginProvider           String
   externalUsername        String?
   externalId              String
@@ -66,8 +64,8 @@ model UserProfile {
 
 model UserPassword {
   id                String      @id @default(cuid())
-  createdAt         DateTime    @default(now()) /// @zod.custom(z.coerce.date())
-  updatedAt         DateTime    @default(now()) @updatedAt /// @zod.custom(z.coerce.date())
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @default(now()) @updatedAt
   userId            String      @unique
   user              UserProfile @relation(fields: [userId], references: [id])
   hash              String
@@ -76,8 +74,8 @@ model UserPassword {
 
 model Workspace {
   id        String   @id @default(cuid())
-  createdAt DateTime @default(now()) /// @zod.custom(z.coerce.date())
-  updatedAt DateTime @default(now()) @updatedAt /// @zod.custom(z.coerce.date())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
   name      String
   deleted   Boolean  @default(false)
 
@@ -97,11 +95,10 @@ model Workspace {
   @@index(updatedAt(sort: Desc))
 }
 
-//additional properties for workspace
 model WorkspaceOptions {
   id          String    @id @default(cuid())
-  createdAt   DateTime  @default(now()) /// @zod.custom(z.coerce.date())
-  updatedAt   DateTime  @default(now()) @updatedAt /// @zod.custom(z.coerce.date())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now()) @updatedAt
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id])
   namespace   String
@@ -118,8 +115,8 @@ enum WorkspaceRole {
 
 model WorkspaceAccess {
   workspaceId String
-  createdAt   DateTime      @default(now()) /// @zod.custom(z.coerce.date())
-  updatedAt   DateTime      @default(now()) @updatedAt /// @zod.custom(z.coerce.date())
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @default(now()) @updatedAt
   userId      String
   workspace   Workspace     @relation(fields: [workspaceId], references: [id])
   user        UserProfile   @relation(fields: [userId], references: [id])
@@ -133,16 +130,16 @@ model WorkspaceUserProperties {
   workspace   Workspace   @relation(fields: [workspaceId], references: [id])
   userId      String
   user        UserProfile @relation(fields: [userId], references: [id])
-  lastUsed    DateTime    @default(now()) /// @zod.custom(z.coerce.date())
+  lastUsed    DateTime    @default(now())
 
   @@id([workspaceId, userId])
 }
 
 model UserApiToken {
   id        String      @id @default(cuid())
-  createdAt DateTime    @default(now()) /// @zod.custom(z.coerce.date())
-  updatedAt DateTime    @default(now()) @updatedAt /// @zod.custom(z.coerce.date())
-  lastUsed  DateTime? /// @zod.custom(z.coerce.date())
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @default(now()) @updatedAt
+  lastUsed  DateTime?
   hint      String
   hash      String
   userId    String
@@ -154,8 +151,8 @@ model InvitationToken {
   workspaceId String
 
   email     String
-  createdAt DateTime      @default(now()) /// @zod.custom(z.coerce.date())
-  updatedAt DateTime      @default(now()) @updatedAt /// @zod.custom(z.coerce.date())
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @default(now()) @updatedAt
   token     String
   usedBy    String?
   role      WorkspaceRole @default(owner)
@@ -164,8 +161,8 @@ model InvitationToken {
 model ConfigurationObject {
   id          String    @id @default(cuid())
   deleted     Boolean?  @default(false)
-  createdAt   DateTime  @default(now()) /// @zod.custom(z.coerce.date())
-  updatedAt   DateTime  @default(now()) @updatedAt /// @zod.custom(z.coerce.date())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now()) @updatedAt
   type        String
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id])
@@ -182,8 +179,8 @@ model ConfigurationObject {
 model ConfigurationObjectLink {
   id        String   @id @default(cuid())
   deleted   Boolean? @default(false)
-  createdAt DateTime @default(now()) /// @zod.custom(z.coerce.date())
-  updatedAt DateTime @default(now()) @updatedAt /// @zod.custom(z.coerce.date())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
   type      String?  @default("push")
   data      Json?
 
@@ -206,13 +203,13 @@ model ConnectorPackage {
   packageType String   @default("airbyte")
   meta        Json?
   logoSvg     Bytes?
-  createdAt   DateTime @default(now()) /// @zod.custom(z.coerce.date())
-  updatedAt   DateTime @default(now()) @updatedAt /// @zod.custom(z.coerce.date())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
 }
 
 model AuditLog {
   id          String   @id @default(cuid())
-  timestamp   DateTime @default(now()) /// @zod.custom(z.coerce.date())
+  timestamp   DateTime @default(now())
   type        String
   userId      String?
   workspaceId String?
@@ -226,8 +223,8 @@ model AuditLog {
 
 model GlobalProps {
   id        String   @id @default(cuid())
-  createdAt DateTime @default(now()) /// @zod.custom(z.coerce.date())
-  updatedAt DateTime @default(now()) @updatedAt /// @zod.custom(z.coerce.date())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
   name      String
   value     Json?
 }
@@ -236,7 +233,7 @@ model source_spec {
   package   String
   version   String
   specs     Json?
-  timestamp DateTime @default(now()) @db.Timestamptz(3) /// @zod.custom(z.coerce.date())
+  timestamp DateTime @default(now()) @db.Timestamptz(3)
   error     String?
 
   @@id([package, version])
@@ -248,7 +245,7 @@ model source_check {
   key         String   @id
   status      String
   description String?
-  timestamp   DateTime @default(now()) @db.Timestamptz(3) /// @zod.custom(z.coerce.date())
+  timestamp   DateTime @default(now()) @db.Timestamptz(3)
 }
 
 model source_catalog {
@@ -256,7 +253,7 @@ model source_catalog {
   version     String
   key         String
   catalog     Json?
-  timestamp   DateTime @default(now()) @db.Timestamptz(3) /// @zod.custom(z.coerce.date())
+  timestamp   DateTime @default(now()) @db.Timestamptz(3)
   status      String
   description String?
 
@@ -267,7 +264,7 @@ model source_state {
   sync_id   String
   stream    String
   state     Json
-  timestamp DateTime @default(now()) @db.Timestamptz(3) /// @zod.custom(z.coerce.date())
+  timestamp DateTime @default(now()) @db.Timestamptz(3)
 
   @@id([sync_id, stream])
 }
@@ -277,8 +274,8 @@ model source_task {
   task_id     String   @id
   package     String
   version     String
-  started_at  DateTime @default(now()) @db.Timestamptz(3) /// @zod.custom(z.coerce.date())
-  updated_at  DateTime @default(now()) @db.Timestamptz(3) /// @zod.custom(z.coerce.date())
+  started_at  DateTime @default(now()) @db.Timestamptz(3)
+  updated_at  DateTime @default(now()) @db.Timestamptz(3)
   started_by  Json?
   status      String
   description String?
@@ -296,7 +293,7 @@ model task_log {
   message   String
   sync_id   String
   task_id   String
-  timestamp DateTime @default(now()) @db.Timestamptz(3) /// @zod.custom(z.coerce.date())
+  timestamp DateTime @default(now()) @db.Timestamptz(3)
 
   @@index(sync_id)
   @@index(task_id)
@@ -307,8 +304,8 @@ model ProfileBuilder {
   id                             String                   @id @default(cuid())
   name                           String
   deleted                        Boolean?                 @default(false)
-  createdAt                      DateTime                 @default(now()) /// @zod.custom(z.coerce.date())
-  updatedAt                      DateTime                 @default(now()) @updatedAt /// @zod.custom(z.coerce.date())
+  createdAt                      DateTime                 @default(now())
+  updatedAt                      DateTime                 @default(now()) @updatedAt
   workspaceId                    String
   workspace                      Workspace                @relation(fields: [workspaceId], references: [id])
   intermediateStorageCredentials Json
@@ -321,8 +318,8 @@ model ProfileBuilder {
 
 model ProfileBuilderFunction {
   id               String              @id @default(cuid())
-  createdAt        DateTime            @default(now()) /// @zod.custom(z.coerce.date())
-  updatedAt        DateTime            @default(now()) @updatedAt /// @zod.custom(z.coerce.date())
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @default(now()) @updatedAt
   profileBuilderId String
   profileBuilder   ProfileBuilder      @relation(fields: [profileBuilderId], references: [id])
   functionId       String
@@ -361,7 +358,7 @@ model StatusChange {
   actorId     String
   type        String
   tableName   String
-  timestamp   DateTime @default(now()) @db.Timestamptz(3) /// @zod.custom(z.coerce.date())
+  timestamp   DateTime @default(now()) @db.Timestamptz(3)
   status      String
   startedAt   DateTime
   counts      Int      @default(0)
@@ -379,8 +376,8 @@ model NotificationState {
   type             String
   tableName        String
   channelId        String
-  flappingSince    DateTime? @db.Timestamptz(3) /// @zod.custom(z.coerce.date())
-  lastNotification DateTime  @db.Timestamptz(3) /// @zod.custom(z.coerce.date())
+  flappingSince    DateTime? @db.Timestamptz(3)
+  lastNotification DateTime  @db.Timestamptz(3)
   statusChangeId   BigInt
   error            String?
 
@@ -395,7 +392,7 @@ model Notification {
   tableName      String
   channelId      String
   statusChangeId BigInt
-  timestamp      DateTime @default(now()) @db.Timestamptz(3) /// @zod.custom(z.coerce.date())
+  timestamp      DateTime @default(now()) @db.Timestamptz(3)
   status         String
   error          String?
 
@@ -403,64 +400,46 @@ model Notification {
   @@index(timestamp)
 }
 
-// OIDC Provider configuration for custom authentication
 model OidcProvider {
   id        String   @id @default(cuid())
-  createdAt DateTime @default(now()) /// @zod.custom(z.coerce.date())
-  updatedAt DateTime @default(now()) @updatedAt /// @zod.custom(z.coerce.date())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
-  // Display name for the provider
   name String
-
-  // OIDC configuration
-  issuer       String // OIDC issuer URL (e.g., https://auth.company.com)
+  issuer       String
   clientId     String
-  clientSecret String // Should be encrypted in production
-
-  // OIDC endpoints - if autoDiscovery is true, these will be fetched from /.well-known/openid-configuration
-  authorizationEndpoint String? // maps to authorization_endpoint
-  tokenEndpoint         String? // maps to token_endpoint
-  userinfoEndpoint      String? // maps to userinfo_endpoint
-  jwksUri               String? // maps to jwks_uri
-  introspectionEndpoint String? // maps to introspection_endpoint
-
-  // OAuth scopes to request
+  clientSecret String
+  authorizationEndpoint String?
+  tokenEndpoint         String?
+  userinfoEndpoint      String?
+  jwksUri               String?
+  introspectionEndpoint String?
   scopes String[] @default(["openid", "profile", "email", "offline_access"])
-
-  // OAuth/OIDC parameters
-  audience String? // The audience parameter for the authorization request (defaults to clientId)
-  prompt   String? // The prompt parameter for the authorization request (e.g., "login", "consent")
-
-  // Claims mapping - which OIDC claims to use for user properties
-  usernameClaim String @default("email") // Claim to use as username
-  emailClaim    String @default("email") // Claim to use for email
-  nameClaim     String @default("name") // Claim to use for display name
-  groupClaim    String @default("groups") // Which claim contains user's groups
-
+  audience String?
+  prompt   String?
+  usernameClaim String @default("email")
+  emailClaim    String @default("email")
+  nameClaim     String @default("name")
+  groupClaim    String @default("groups")
   enabled       Boolean @default(true)
-  autoDiscovery Boolean @default(true) // Whether to use OIDC discovery endpoint
+  autoDiscovery Boolean @default(true)
 
   oidcLoginGroups OidcLoginGroup[]
 
   @@unique([issuer, clientId])
 }
 
-// Links OIDC providers to workspaces with access control rules
 model OidcLoginGroup {
   id        String   @id @default(cuid())
-  createdAt DateTime @default(now()) /// @zod.custom(z.coerce.date())
-  updatedAt DateTime @default(now()) @updatedAt /// @zod.custom(z.coerce.date())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
   workspaceId    String
   workspace      Workspace    @relation(fields: [workspaceId], references: [id])
   oidcProviderId String
   oidcProvider   OidcProvider @relation(fields: [oidcProviderId], references: [id])
 
-  // Group-based access control
-  groupValue String? // Required group value (e.g., "engineering", "admins")
-
-  // If true, all authenticated users from this OIDC provider can access the workspace
-  // If false, only users with matching groupValue in their groupClaim can access
+  groupValue String?
   allowAllUsers Boolean @default(false)
 
   @@unique([workspaceId, oidcProviderId])
@@ -512,7 +491,7 @@ model reprocessing_workers {
 
 model FunctionsServer {
   workspaceId      String
-  class            String // 'free' | 'dedicated' | 'premium'
+  class            String
   deploymentId     String
   connections      String[]
   emptyConnections String[]
@@ -521,11 +500,3 @@ model FunctionsServer {
 
   @@id([workspaceId, class])
 }
-
-//model OauthSecrets {
-//  id        String   @id @default(cuid())
-//  createdAt DateTime @default(now()) /// @zod.custom(z.coerce.date())
-//  updatedAt DateTime @default(now()) @updatedAt /// @zod.custom(z.coerce.date())
-//  nangoIntegrationId String
-//  secrets      Json?
-//}
