@@ -39,7 +39,6 @@ x-kafka-env: &kafka-env
 x-console-env: &console-env
   <<: [*common-env, *database-env, *clickhouse-env, *mongodb-env, *kafka-env]
   NEXT_PUBLIC_LOG_LEVEL: debug
-  APP_DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres-mqf3nzx}@dep-postgres:5432/postgres?schema=newjitsu
   JWT_SECRET: 6de1460fd8ba429285c9e72cc5339291
   EE_API_AUTH_TOKENS: 5f92ff738db8432899737fbdc7259bbd
   EE_CONNECTION: http://console:3000?jwtSecret=6de1460fd8ba429285c9e72cc5339291
@@ -48,10 +47,11 @@ x-console-env: &console-env
   BULKER_AUTH_KEY: ${BULKER_TOKEN:-dev-auth-key}
   ROTOR_URL: http://rotor:3401
   ROTOR_AUTH_KEY: ${ROTOR_TOKEN:-dev-auth-key}
+  APP_DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres-mqf3nzx}@dep-postgres:5432/postgres?schema=newjitsu
   EE_DISABLE_AUTH: yes
   DISABLE_SIGNUP: false
   ENABLE_CREDENTIALS_LOGIN: true
-  SEED_USER_EMAIL: admin@jitsu.com
+  SEED_USER_EMAIL: ${SEED_USER_EMAIL:-admin@jitsu.com}
   SEED_USER_PASSWORD: ${SEED_USER_PASSWORD:-admin123}
   SEED_DEMO_CONFIGURATION: ${SEED_DEMO_CONFIGURATION:-}
   JITSU_INGEST_PUBLIC_URL: ${JITSU_INGEST_PUBLIC_URL:-http://localhost:${INGEST_PORT:-3049}}
@@ -145,6 +145,7 @@ services:
       - "${PG_PORT:-5438}:5432"
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
+      - ./postgres-init.sql:/docker-entrypoint-initdb.d/postgres-init.sql
     profiles:
       - jitsu-services
       - jitsu-dependencies
@@ -184,6 +185,7 @@ services:
       - "${CLICKHOUSE_NATIVE_PORT:-9000}:9000"
     volumes:
       - ./data/clickhouse:/var/lib/clickhouse
+      - ./clickhouse-init.sql:/docker-entrypoint-initdb.d/clickhouse-init.sql
     ulimits:
       nofile:
         soft: 262144
@@ -195,6 +197,7 @@ services:
 
   dep-redpanda:
     container_name: jitsu-dep-redpanda
+    user: root
     networks:
       - jitsu-dev-network
     image: docker.redpanda.com/redpandadata/redpanda:latest
@@ -384,7 +387,7 @@ services:
       interval: 10s
       timeout: 10s
       retries: 5
-      start_period: 40s
+      start_period: 60s
     environment:
       <<: *bulker-env
     env_file: *env-files
@@ -417,7 +420,7 @@ services:
       interval: 10s
       timeout: 10s
       retries: 5
-      start_period: 40s
+      start_period: 60s
     environment:
       <<: *ingest-env
     env_file: *env-files
