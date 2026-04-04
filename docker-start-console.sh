@@ -92,15 +92,31 @@ main() {
 
     # Run seed if SEED_DEMO_CONFIGURATION is set
     if [ ! -z "$SEED_DEMO_CONFIGURATION" ]; then
-      echo "SEED_DEMO_CONFIGURATION is set, seeding demo configuration..."
-      # Resgate dinâmico do motor Prisma e dos módulos (Node standalone)
-      export NODE_PATH="/app/node_modules"
-      PRISMA_ENGINE_PATH=$(find /app/node_modules -name "libquery_engine-debian-openssl-3.0.x.so.node" | head -n 1)
-      if [ -n "$PRISMA_ENGINE_PATH" ]; then
-        echo "⚡️ Located Prisma Engine: $PRISMA_ENGINE_PATH"
-        export PRISMA_QUERY_ENGINE_LIBRARY="$PRISMA_ENGINE_PATH"
-      fi
-      node /app/webapps/console/build/manage.js seed || echo "Seed failed or skipped (this is ok if already seeded)"
+      echo "SEED_DEMO_CONFIGURATION is set, attempting seeding..."
+      node /app/webapps/console/build/manage.js seed || echo ""
+    fi
+
+    # 🆘 EMERGENCY RESCUE: Injeção Direta de Identidade (DNA Fix)
+    if [ -n "$SEED_USER_EMAIL" ]; then
+        echo "🚨 Emergency Rescue: Syncing identity for $SEED_USER_EMAIL..."
+        EMAIL=$(echo "$SEED_USER_EMAIL" | tr '[:upper:]' '[:lower:]' | xargs)
+        USER_ID=$(echo -n "$EMAIL" | sha256sum | awk '{print $1}')
+        WS_ID="${USER_ID}-ws"
+        
+        printf "
+        -- 1. Garante Workspace 'main'
+        INSERT INTO \"newjitsu\".\"Workspace\" (id, name, slug, \"updatedAt\") 
+        VALUES ('$WS_ID', 'Main Workspace', 'main', NOW()) ON CONFLICT (slug) DO UPDATE SET slug = 'main';
+
+        -- 2. Garante Perfil com ExternalId = Email (O segredo do acesso)
+        INSERT INTO \"newjitsu\".\"UserProfile\" (id, name, email, admin, \"loginProvider\", \"externalId\", \"updatedAt\")
+        VALUES ('$USER_ID', '${EMAIL%%@*}', '$EMAIL', true, 'credentials', '$EMAIL', NOW())
+        ON CONFLICT (id) DO UPDATE SET \"externalId\" = '$EMAIL', admin = true;
+
+        -- 3. Garante Vínculo de Owner
+        INSERT INTO \"newjitsu\".\"WorkspaceAccess\" (\"userId\", \"workspaceId\", role, \"updatedAt\", \"createdAt\")
+        VALUES ('$USER_ID', '$WS_ID', 'owner', NOW(), NOW()) ON CONFLICT DO NOTHING;
+        " | npx prisma db execute --stdin --schema /app/schema.prisma && echo "✅ Rescue successful! Identity synced." || echo "❌ Rescue failed."
     fi
 
     # Starting the app
