@@ -141,11 +141,14 @@ COPY --from=builder /app/webapps/console/public ./webapps/console/public
 COPY --from=builder /app/webapps/console/build/manage.js ./webapps/console/build/
 
 # Install @prisma/client and generate Prisma Client (needed for manage.js seed)
-# The manage.js bundle uses --external:@prisma/client, so it needs the client at runtime
-# We install + generate here instead of copying from builder because pnpm uses
-# symlinks and a content-addressable store that doesn't survive COPY
-RUN npm install @prisma/client@$(jq -r '.dependencies["@prisma/client"]' /tmp/console-package.json) && \
-    prisma generate --schema ./schema.prisma
+# Installed in isolation (/tmp) to avoid npm crashing on pnpm's node_modules structure
+RUN npm install --silent --prefix /tmp/prisma-install \
+      @prisma/client@$(jq -r '.dependencies["@prisma/client"]' /tmp/console-package.json) && \
+    mkdir -p node_modules/@prisma node_modules/.prisma && \
+    cp -r /tmp/prisma-install/node_modules/@prisma/client node_modules/@prisma/client && \
+    cp -r /tmp/prisma-install/node_modules/.prisma/client node_modules/.prisma/client 2>/dev/null; \
+    prisma generate --schema ./schema.prisma && \
+    rm -rf /tmp/prisma-install
 
 # Setup cron for scheduled tasks (e.g., cleanup, analytics aggregation)
 # chmod 0644: cron requires specific permissions (owner read/write, others read)
